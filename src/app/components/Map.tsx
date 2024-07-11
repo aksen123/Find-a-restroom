@@ -1,15 +1,16 @@
 "use client";
 
-import Script from "next/script";
 import { useEffect, useState } from "react";
-import { CustomOverlayMap, Map } from "react-kakao-maps-sdk";
-
+import { CustomOverlayMap, Map, MapMarker } from "react-kakao-maps-sdk";
+import { useKakaoLoader } from "react-kakao-maps-sdk";
 export default function MainMap() {
   const [location, setLocation] = useState<{ lat: number; lng: number }>({
     lat: 0,
     lng: 0,
   });
-
+  const [loading, error] = useKakaoLoader({
+    appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
+  });
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -31,7 +32,9 @@ export default function MainMap() {
         center={location}
         style={{ width: "100%", height: "100vh", position: "relative" }}
         level={3}
-      ></Map>
+      >
+        <MapMarker position={location}>여기 ?</MapMarker>
+      </Map>
       <div className="z-30 absolute top-6 left-6">
         <span>메뉴바</span>
       </div>

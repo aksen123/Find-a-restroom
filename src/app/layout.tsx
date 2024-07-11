@@ -15,10 +15,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <Script
+        {/* <Script
           src={`http://dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_KEY}&autoload=false`}
           strategy="beforeInteractive"
-        />
+        /> */}
       </head>
       <body>{children}</body>
     </html>
