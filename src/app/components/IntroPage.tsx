@@ -1,10 +1,18 @@
+"use client";
 import Image from "next/image";
-import React from "react";
+import { useRouter } from "next/navigation";
+import React, { useEffect } from "react";
 
 export default function IntroPage() {
+  const { push } = useRouter();
+  useEffect(() => {
+    setTimeout(() => {
+      push("/Map");
+    }, 2000);
+  }, []);
   return (
     <section className="w-full h-screen flex flex-col justify-center items-center relative">
-      <p className=" z-10 p-4 text-2xl md:text-4xl  font-bold">
+      <p className=" z-10 p-4 text-2xl md:text-4xl font-bold animate-slideInLeft">
         급변(急變)하는 세상
       </p>
       <div className="flex-1 relative w-full">
@@ -18,7 +26,7 @@ export default function IntroPage() {
           className="object-fill lg:object-contain"
         />
       </div>
-      <p className="p-4 text-2xl md:text-4xl  font-bold">
+      <p className="p-4 text-2xl md:text-4xl font-bold animate-slideInRight opacity-0">
         급변(急便)하는 당신을 위해
       </p>
     </section>

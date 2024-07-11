@@ -13,9 +13,19 @@ const config: Config = {
         "gradient-conic":
           "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
       },
+      keyframes: {
+        slideInLeft: {
+          "0%": { transform: "translateX(-100%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
+        slideInRight: {
+          "0%": { transform: "translateX(100%)", opacity: "0" },
+          "100%": { transform: "translateX(0)", opacity: "1" },
+        },
+      },
       animation: {
-        "intro-1": "",
-        "intro-2": "",
+        slideInLeft: "slideInLeft 0.5s ease-out",
+        slideInRight: "slideInRight 0.5s ease-out 0.5s forwards",
       },
     },
   },
