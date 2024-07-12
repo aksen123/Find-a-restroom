@@ -6,9 +6,11 @@ import React, { useEffect } from "react";
 export default function IntroPage() {
   const { push } = useRouter();
   useEffect(() => {
-    setTimeout(() => {
+    const router = setTimeout(() => {
       push("/Map");
-    }, 2000);
+    }, 1500);
+
+    return () => clearTimeout(router);
   }, []);
   return (
     <section className="w-full h-screen flex flex-col justify-center items-center relative">
