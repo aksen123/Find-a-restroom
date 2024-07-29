@@ -1,7 +1,7 @@
 import { RestRooms } from "../api/restrooms/route";
 import api from "./axios";
 
-interface Param {
+export interface Param {
   sw_lat: number;
   ne_lat: number;
   sw_lng: number;
