@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Map, useKakaoLoader } from "react-kakao-maps-sdk";
+import { CustomOverlayMap, Map, useKakaoLoader } from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
 
 interface Location {
@@ -13,9 +13,9 @@ export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
-  const [markerClusterer, setMarkerClusterer] = useState<
-    kakao.maps.MarkerClusterer[] | null
-  >(null);
+  const [markerClusterer, setMarkerClusterer] =
+    useState<kakao.maps.MarkerClusterer | null>(null);
+  const [overlay, setOverlay] = useState<Location | null>(null);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -51,22 +51,26 @@ export default function Page() {
       ne_lng: bounds.getNorthEast().getLng(),
     };
     const restrooms = await getMarker.get(params as Param);
-    const newMarkers = restrooms.map((el) => {
+    const newMarkers = restrooms.map((restroom) => {
       const marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(el.latitude, el.longitude),
-        title: el.toilet_name,
+        position: new kakao.maps.LatLng(restroom.latitude, restroom.longitude),
+        title: restroom.toilet_name,
         map: map,
       });
-
+      kakao.maps.event.addListener(marker, "click", () => {
+        setOverlay({ lat: restroom.latitude, lng: restroom.longitude });
+        map.panTo(marker.getPosition());
+      });
       return marker;
     });
     const cluster = new kakao.maps.MarkerClusterer({
       map: map,
+      markers: newMarkers,
       minLevel: 5,
     });
 
-    cluster.clear();
-    cluster.addMarkers(newMarkers);
+    markerClusterer?.setMap(null);
+    setMarkerClusterer(cluster);
     markers?.forEach((el) => el.setMap(null));
     setMarkers(newMarkers);
     console.log(restrooms);
@@ -93,7 +97,9 @@ export default function Page() {
       }
     );
   };
-
+  const closeOverlay = () => {
+    setOverlay(null);
+  };
   return (
     <>
       <div className="relative">
@@ -105,7 +111,24 @@ export default function Page() {
             onDragEnd={changeMap}
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
-          ></Map>
+          >
+            {overlay && (
+              <CustomOverlayMap
+                position={overlay}
+                clickable
+                zIndex={1}
+                yAnchor={1.5}
+              >
+                <div className={`w-fit h-fit p-3 bg-blue-500`}>
+                  <button onClick={closeOverlay}>닫기~</button>
+                  <div>
+                    커스텀 오버레이 TODO : 길찾기 버튼, 화장실 정보 등 추가
+                    하기, 퍼블리싱 후 위치 조정(모바일, 웹)
+                  </div>
+                </div>
+              </CustomOverlayMap>
+            )}
+          </Map>
         )}
         <div className="z-30 absolute top-6 left-6">
           <span>메뉴바</span>
