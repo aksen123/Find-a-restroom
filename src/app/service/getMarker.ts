@@ -1,4 +1,4 @@
-import { RestRooms } from "../api/restrooms/route";
+import { RestroomsData } from "../api/restrooms/route";
 import api from "./axios";
 
 export interface Param {
@@ -9,7 +9,7 @@ export interface Param {
 }
 
 export const getMarker = {
-  get(a: Param): Promise<RestRooms[]> {
+  get(a: Param): Promise<RestroomsData[]> {
     return api.get("/api/restrooms", { params: a });
   },
 };

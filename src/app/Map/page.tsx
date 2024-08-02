@@ -3,19 +3,25 @@
 import React, { useEffect, useState } from "react";
 import { CustomOverlayMap, Map, useKakaoLoader } from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
+import { time } from "console";
 
 interface Location {
   lat: number;
   lng: number;
 }
-
+interface Overlay {
+  location: Location;
+  time: string;
+  name: string;
+}
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
-  const [overlay, setOverlay] = useState<Location | null>(null);
+  const [overlay, setOverlay] = useState<Overlay | null>(null);
+
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -58,7 +64,12 @@ export default function Page() {
         map: map,
       });
       kakao.maps.event.addListener(marker, "click", () => {
-        setOverlay({ lat: restroom.latitude, lng: restroom.longitude });
+        const overlay = {
+          location: { lat: restroom.latitude, lng: restroom.longitude },
+          name: restroom.toilet_name,
+          time: restroom.detailed_opening_hours,
+        };
+        setOverlay(overlay);
         map.panTo(marker.getPosition());
       });
       return marker;
@@ -100,6 +111,7 @@ export default function Page() {
   const closeOverlay = () => {
     setOverlay(null);
   };
+
   return (
     <>
       <div className="relative">
@@ -114,16 +126,20 @@ export default function Page() {
           >
             {overlay && (
               <CustomOverlayMap
-                position={overlay}
+                position={overlay.location}
                 clickable
                 zIndex={1}
                 yAnchor={1.5}
               >
-                <div className={`w-fit h-fit p-3 bg-blue-500`}>
-                  <button onClick={closeOverlay}>닫기~</button>
+                <div className={`w-fit h-fit p-3 bg-blue-500 flex flex-col`}>
+                  <button onClick={closeOverlay} className="text-right">
+                    닫기~
+                  </button>
                   <div>
-                    커스텀 오버레이 TODO : 길찾기 버튼, 화장실 정보 등 추가
-                    하기, 퍼블리싱 후 위치 조정(모바일, 웹)
+                    <p>{overlay.name}</p>
+                    <p>{overlay.time}</p>
+                    {/* 커스텀 오버레이 TODO : 길찾기 버튼, 화장실 정보 등 추가
+                    하기, 퍼블리싱 후 위치 조정(모바일, 웹) */}
                   </div>
                 </div>
               </CustomOverlayMap>
