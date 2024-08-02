@@ -1,15 +1,11 @@
 import React from "react";
-import KakaoLoader from "./components/kakao-loader";
-import { Map } from "react-kakao-maps-sdk";
-import Script from "next/script";
-import MainMap from "./components/Map";
 import IntroPage from "./components/IntroPage";
-
+import Test from "./Test";
 export default function Page() {
   return (
     <>
       <IntroPage />
-      {/* <MainMap /> */}
+      {/* <Test /> */}
     </>
   );
 }
