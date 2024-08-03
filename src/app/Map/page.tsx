@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CustomOverlayMap, Map, useKakaoLoader } from "react-kakao-maps-sdk";
+import {
+  CustomOverlayMap,
+  Map,
+  MapMarker,
+  useKakaoLoader,
+} from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
 import { time } from "console";
 
@@ -13,6 +18,7 @@ interface Overlay {
   location: Location;
   time: string;
   name: string;
+  distance: number;
 }
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
@@ -63,12 +69,23 @@ export default function Page() {
         title: restroom.toilet_name,
         map: map,
       });
+
       kakao.maps.event.addListener(marker, "click", () => {
-        const overlay = {
+        const markerPosition = marker.getPosition();
+        const myLocation = new kakao.maps.LatLng(
+          location?.lat as number,
+          location?.lng as number
+        );
+        const polyline = new kakao.maps.Polyline({
+          path: [markerPosition, myLocation],
+        });
+        const overlay: Overlay = {
           location: { lat: restroom.latitude, lng: restroom.longitude },
           name: restroom.toilet_name,
           time: restroom.detailed_opening_hours,
+          distance: polyline.getLength(),
         };
+        //TODO : 마커 클릭시 내위치와 마커의 거리 계산하기
         setOverlay(overlay);
         map.panTo(marker.getPosition());
       });
@@ -84,7 +101,6 @@ export default function Page() {
     setMarkerClusterer(cluster);
     markers?.forEach((el) => el.setMap(null));
     setMarkers(newMarkers);
-    console.log(restrooms);
   };
   const changeMap = () => {
     if (map) {
@@ -124,6 +140,7 @@ export default function Page() {
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
           >
+            <MapMarker position={location}>여기</MapMarker>
             {overlay && (
               <CustomOverlayMap
                 position={overlay.location}
@@ -131,15 +148,20 @@ export default function Page() {
                 zIndex={1}
                 yAnchor={1.5}
               >
-                <div className={`w-fit h-fit p-3 bg-blue-500 flex flex-col`}>
+                <div
+                  className={`w-fit h-fit p-3 bg-blue-200 flex flex-col gap-3`}
+                >
                   <button onClick={closeOverlay} className="text-right">
-                    닫기~
+                    닫기
                   </button>
                   <div>
-                    <p>{overlay.name}</p>
-                    <p>{overlay.time}</p>
-                    {/* 커스텀 오버레이 TODO : 길찾기 버튼, 화장실 정보 등 추가
-                    하기, 퍼블리싱 후 위치 조정(모바일, 웹) */}
+                    <p>화장실명:{overlay.name}</p>
+                    <p>
+                      개방 시간:{" "}
+                      {overlay.time === "" ? "정보 없음" : overlay.time}
+                    </p>
+                    <p>직선거리:{overlay.distance}</p>
+                    <button>길찾기</button>
                   </div>
                 </div>
               </CustomOverlayMap>
