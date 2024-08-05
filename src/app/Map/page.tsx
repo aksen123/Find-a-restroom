@@ -9,6 +9,7 @@ import {
 } from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
 import { time } from "console";
+import { RestroomsData } from "../api/restrooms/route";
 
 interface Location {
   lat: number;
@@ -18,12 +19,13 @@ interface Overlay {
   location: Location;
   time: string;
   name: string;
-  distance: number;
+  distance: string;
 }
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
+  const [markers2, setMarkers2] = useState<RestroomsData[] | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
@@ -65,12 +67,20 @@ export default function Page() {
     const restrooms = await getMarker.get(params as Param);
     const newMarkers = restrooms.map((restroom) => {
       const marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(restroom.latitude, restroom.longitude),
-        title: restroom.toilet_name,
+        position: new kakao.maps.LatLng(restroom.lat, restroom.lng),
+        title: restroom.name,
         map: map,
       });
 
       kakao.maps.event.addListener(marker, "click", () => {
+        const markersClick = restrooms.filter(
+          (r) =>
+            Math.abs(r.lat - restroom.lat) < 0.00001 &&
+            Math.abs(r.lng - restroom.lng) < 0.00001
+        );
+        if (markersClick.length > 0) setMarkers2(markersClick);
+        //TODO 클릭시 중복된 마커가 있으면 리스트로 보여주고 리스트 클릭시 원래 오버레이 보이게 표기
+        // 중복안된 마커는 원래대로 오버레이 보여주기.
         const markerPosition = marker.getPosition();
         const myLocation = new kakao.maps.LatLng(
           location?.lat as number,
@@ -79,13 +89,16 @@ export default function Page() {
         const polyline = new kakao.maps.Polyline({
           path: [markerPosition, myLocation],
         });
+        const distance =
+          polyline.getLength() > 1000
+            ? (polyline.getLength() / 1000).toFixed(2) + "km"
+            : Math.ceil(polyline.getLength()) + "m";
         const overlay: Overlay = {
-          location: { lat: restroom.latitude, lng: restroom.longitude },
-          name: restroom.toilet_name,
-          time: restroom.detailed_opening_hours,
-          distance: polyline.getLength(),
+          location: { lat: restroom.lat, lng: restroom.lng },
+          name: restroom.name,
+          time: restroom.time,
+          distance: distance,
         };
-        //TODO : 마커 클릭시 내위치와 마커의 거리 계산하기
         setOverlay(overlay);
         map.panTo(marker.getPosition());
       });
@@ -127,7 +140,7 @@ export default function Page() {
   const closeOverlay = () => {
     setOverlay(null);
   };
-
+  console.log("중복 :", markers2);
   return (
     <>
       <div className="relative">
@@ -140,7 +153,7 @@ export default function Page() {
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
           >
-            <MapMarker position={location}>여기</MapMarker>
+            <MapMarker position={location}>내위치</MapMarker>
             {overlay && (
               <CustomOverlayMap
                 position={overlay.location}
@@ -157,7 +170,7 @@ export default function Page() {
                   <div>
                     <p>화장실명:{overlay.name}</p>
                     <p>
-                      개방 시간:{" "}
+                      개방 시간:
                       {overlay.time === "" ? "정보 없음" : overlay.time}
                     </p>
                     <p>직선거리:{overlay.distance}</p>
