@@ -29,7 +29,7 @@ export default function Page() {
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
-
+  const [search, setSearch] = useState<boolean>(false);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -114,11 +114,10 @@ export default function Page() {
     setMarkerClusterer(cluster);
     markers?.forEach((el) => el.setMap(null));
     setMarkers(newMarkers);
+    setSearch(false);
   };
   const changeMap = () => {
-    if (map) {
-      getRestroom(map);
-    }
+    setSearch(true);
   };
   const myLocationClick = () => {
     navigator.geolocation.getCurrentPosition(
@@ -140,7 +139,9 @@ export default function Page() {
   const closeOverlay = () => {
     setOverlay(null);
   };
-  console.log("중복 :", markers2);
+  const searchButton = () => {
+    if (map) getRestroom(map);
+  };
   return (
     <>
       <div className="relative">
@@ -188,6 +189,14 @@ export default function Page() {
           <span>내 위치</span>
         </div>
         <div className="absolute bottom-0 bg-slate-500 w-full h-20 z-30 rounded-t-3xl flex items-center justify-center">
+          {search && (
+            <button
+              onClick={searchButton}
+              className="absolute -top-full border-2 border-blue-500 rounded-2xl p-3 text-white bg-blue-500"
+            >
+              현위치에서 검색
+            </button>
+          )}
           <form
             action=""
             className="relative w-4/5 h-1/2 bg-white rounded-2xl overflow-hidden flex items-center px-1"
