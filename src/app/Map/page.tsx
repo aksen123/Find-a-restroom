@@ -5,13 +5,13 @@ import {
   CustomOverlayMap,
   Map,
   MapMarker,
+  Polyline,
   useKakaoLoader,
 } from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
-import { time } from "console";
 import { RestroomsData } from "../api/restrooms/route";
 
-interface Location {
+export interface Location {
   lat: number;
   lng: number;
 }
@@ -30,6 +30,7 @@ export default function Page() {
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
   const [search, setSearch] = useState<boolean>(false);
+  const [polyline, setPolyline] = useState<Location[] | null>(null);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -89,6 +90,11 @@ export default function Page() {
         const polyline = new kakao.maps.Polyline({
           path: [markerPosition, myLocation],
         });
+        location &&
+          setPolyline([
+            location,
+            { lat: markerPosition.getLat(), lng: markerPosition.getLng() },
+          ]);
         const distance =
           polyline.getLength() > 1000
             ? (polyline.getLength() / 1000).toFixed(2) + "km"
@@ -138,9 +144,16 @@ export default function Page() {
   };
   const closeOverlay = () => {
     setOverlay(null);
+    setPolyline(null);
   };
   const searchButton = () => {
     if (map) getRestroom(map);
+  };
+
+  const getPath = async () => {
+    console.log(polyline);
+    const path = await getMarker.test(polyline);
+    console.log(path);
   };
   return (
     <>
@@ -155,6 +168,15 @@ export default function Page() {
             onCreate={(map) => setMap(map)}
           >
             <MapMarker position={location}>내위치</MapMarker>
+            {polyline && (
+              <Polyline
+                path={polyline}
+                strokeWeight={3} // 선의 두께입니다
+                strokeColor={"#db4040"} // 선의 색깔입니다
+                strokeOpacity={1} // 선의 불투명도입니다 0에서 1 사이값이며 0에 가까울수록 투명합니다
+                strokeStyle={"solid"} // 선의 스타일입니다
+              />
+            )}
             {overlay && (
               <CustomOverlayMap
                 position={overlay.location}
@@ -175,7 +197,7 @@ export default function Page() {
                       {overlay.time === "" ? "정보 없음" : overlay.time}
                     </p>
                     <p>직선거리:{overlay.distance}</p>
-                    <button>길찾기</button>
+                    <button onClick={getPath}>길찾기</button>
                   </div>
                 </div>
               </CustomOverlayMap>

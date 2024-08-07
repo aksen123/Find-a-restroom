@@ -12,4 +12,7 @@ export const getMarker = {
   get(a: Param): Promise<RestroomsData[]> {
     return api.get("/api/restrooms", { params: a });
   },
+  test(a: any, b: any): Promise<any> {
+    return api.get("/api/path", { params: a });
+  },
 };

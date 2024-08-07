@@ -11,6 +11,7 @@ export interface RestroomsData {
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
+  console.log("🚀 ~ GET ~ searchParams:", searchParams);
   let searchBounds: number[] = [];
   searchParams.forEach((el) => searchBounds.push(+el));
 
@@ -24,7 +25,6 @@ export async function GET(req: NextRequest) {
   );
 
   conn.release();
-  console.log(rows, searchBounds);
 
   return Response.json({ data: rows });
 }
