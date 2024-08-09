@@ -61,7 +61,5 @@ const onError = (error: CustomAxiosError) => {
 
 api.interceptors.request.use(onRequest, onError);
 api.interceptors.response.use(onResponse, onError);
-apiFile.interceptors.request.use(onRequest, onError);
-apiFile.interceptors.response.use(onResponse, onError);
 
 export default api;

@@ -1,21 +1,36 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CustomOverlayMap, Map, useKakaoLoader } from "react-kakao-maps-sdk";
+import {
+  CustomOverlayMap,
+  Map,
+  MapMarker,
+  Polyline,
+  useKakaoLoader,
+} from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
+import { RestroomsData } from "../api/restrooms/route";
 
-interface Location {
+export interface Location {
   lat: number;
   lng: number;
 }
-
+interface Overlay {
+  location: Location;
+  time: string;
+  name: string;
+  distance: string;
+}
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [location, setLocation] = useState<Location | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
+  const [markers2, setMarkers2] = useState<RestroomsData[] | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
-  const [overlay, setOverlay] = useState<Location | null>(null);
+  const [overlay, setOverlay] = useState<Overlay | null>(null);
+  const [search, setSearch] = useState<boolean>(false);
+  const [polyline, setPolyline] = useState<Location[] | null>(null);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -53,12 +68,44 @@ export default function Page() {
     const restrooms = await getMarker.get(params as Param);
     const newMarkers = restrooms.map((restroom) => {
       const marker = new kakao.maps.Marker({
-        position: new kakao.maps.LatLng(restroom.latitude, restroom.longitude),
-        title: restroom.toilet_name,
+        position: new kakao.maps.LatLng(restroom.lat, restroom.lng),
+        title: restroom.name,
         map: map,
       });
+
       kakao.maps.event.addListener(marker, "click", () => {
-        setOverlay({ lat: restroom.latitude, lng: restroom.longitude });
+        const markersClick = restrooms.filter(
+          (r) =>
+            Math.abs(r.lat - restroom.lat) < 0.00001 &&
+            Math.abs(r.lng - restroom.lng) < 0.00001
+        );
+        if (markersClick.length > 0) setMarkers2(markersClick);
+        //TODO 클릭시 중복된 마커가 있으면 리스트로 보여주고 리스트 클릭시 원래 오버레이 보이게 표기
+        // 중복안된 마커는 원래대로 오버레이 보여주기.
+        const markerPosition = marker.getPosition();
+        const myLocation = new kakao.maps.LatLng(
+          location?.lat as number,
+          location?.lng as number
+        );
+        const polyline = new kakao.maps.Polyline({
+          path: [markerPosition, myLocation],
+        });
+        location &&
+          setPolyline([
+            location,
+            { lat: markerPosition.getLat(), lng: markerPosition.getLng() },
+          ]);
+        const distance =
+          polyline.getLength() > 1000
+            ? (polyline.getLength() / 1000).toFixed(2) + "km"
+            : Math.ceil(polyline.getLength()) + "m";
+        const overlay: Overlay = {
+          location: { lat: restroom.lat, lng: restroom.lng },
+          name: restroom.name,
+          time: restroom.time,
+          distance: distance,
+        };
+        setOverlay(overlay);
         map.panTo(marker.getPosition());
       });
       return marker;
@@ -73,12 +120,10 @@ export default function Page() {
     setMarkerClusterer(cluster);
     markers?.forEach((el) => el.setMap(null));
     setMarkers(newMarkers);
-    console.log(restrooms);
+    setSearch(false);
   };
   const changeMap = () => {
-    if (map) {
-      getRestroom(map);
-    }
+    setSearch(true);
   };
   const myLocationClick = () => {
     navigator.geolocation.getCurrentPosition(
@@ -99,6 +144,16 @@ export default function Page() {
   };
   const closeOverlay = () => {
     setOverlay(null);
+    setPolyline(null);
+  };
+  const searchButton = () => {
+    if (map) getRestroom(map);
+  };
+
+  const getPath = async () => {
+    console.log(polyline);
+    const path = await getMarker.test(polyline);
+    console.log(path);
   };
   return (
     <>
@@ -112,18 +167,37 @@ export default function Page() {
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
           >
+            <MapMarker position={location}>내위치</MapMarker>
+            {polyline && (
+              <Polyline
+                path={polyline}
+                strokeWeight={3} // 선의 두께입니다
+                strokeColor={"#db4040"} // 선의 색깔입니다
+                strokeOpacity={1} // 선의 불투명도입니다 0에서 1 사이값이며 0에 가까울수록 투명합니다
+                strokeStyle={"solid"} // 선의 스타일입니다
+              />
+            )}
             {overlay && (
               <CustomOverlayMap
-                position={overlay}
+                position={overlay.location}
                 clickable
                 zIndex={1}
                 yAnchor={1.5}
               >
-                <div className={`w-fit h-fit p-3 bg-blue-500`}>
-                  <button onClick={closeOverlay}>닫기~</button>
+                <div
+                  className={`w-fit h-fit p-3 bg-blue-200 flex flex-col gap-3`}
+                >
+                  <button onClick={closeOverlay} className="text-right">
+                    닫기
+                  </button>
                   <div>
-                    커스텀 오버레이 TODO : 길찾기 버튼, 화장실 정보 등 추가
-                    하기, 퍼블리싱 후 위치 조정(모바일, 웹)
+                    <p>화장실명:{overlay.name}</p>
+                    <p>
+                      개방 시간:
+                      {overlay.time === "" ? "정보 없음" : overlay.time}
+                    </p>
+                    <p>직선거리:{overlay.distance}</p>
+                    <button onClick={getPath}>길찾기</button>
                   </div>
                 </div>
               </CustomOverlayMap>
@@ -137,6 +211,14 @@ export default function Page() {
           <span>내 위치</span>
         </div>
         <div className="absolute bottom-0 bg-slate-500 w-full h-20 z-30 rounded-t-3xl flex items-center justify-center">
+          {search && (
+            <button
+              onClick={searchButton}
+              className="absolute -top-full border-2 border-blue-500 rounded-2xl p-3 text-white bg-blue-500"
+            >
+              현위치에서 검색
+            </button>
+          )}
           <form
             action=""
             className="relative w-4/5 h-1/2 bg-white rounded-2xl overflow-hidden flex items-center px-1"

@@ -8,7 +8,7 @@ export default function IntroPage() {
   useEffect(() => {
     const router = setTimeout(() => {
       push("/Map");
-    }, 1500);
+    }, 1000);
 
     return () => clearTimeout(router);
   }, []);
