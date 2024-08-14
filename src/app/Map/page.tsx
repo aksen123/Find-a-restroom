@@ -53,10 +53,9 @@ export default function Page() {
 
   useEffect(() => {
     if (location && map) {
-      console.log("map change");
       getRestroom(map);
     }
-  }, [map, location]);
+  }, [location, map]);
 
   const getRestroom = async (map: kakao.maps.Map) => {
     const bounds = map.getBounds();
@@ -140,7 +139,6 @@ export default function Page() {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
           });
-          getRestroom(map);
         }
       },
       (error) => {
@@ -149,6 +147,7 @@ export default function Page() {
     );
     setOverlay(null);
     setSearch(false);
+    map?.setLevel(3);
   };
   const closeOverlay = () => {
     setOverlay(null);
@@ -162,10 +161,11 @@ export default function Page() {
     const path = await getMarker.test(polyline);
     setPolyline(path);
     setOverlay(null);
-    const index = Math.ceil(path.length / 2);
-    const arr = path[index];
-    const test = new kakao.maps.LatLng(path[index].lat, path[index].lng);
-    map?.setCenter(test);
+    const bounds = new kakao.maps.LatLngBounds();
+    path.map((coord) =>
+      bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
+    );
+    map?.setBounds(bounds);
   };
   return (
     <>
@@ -206,18 +206,20 @@ export default function Page() {
                 yAnchor={1.25}
               >
                 <div
-                  className={`w-fit h-fit p-3 bg-blue-200 flex flex-col gap-3`}
+                  className={`w-fit h-fit p-3 bg-blue-500 flex flex-col gap-3 text-white`}
                 >
-                  <button onClick={closeOverlay} className="text-right">
-                    닫기
-                  </button>
+                  <div className="flex justify-end">
+                    <button onClick={closeOverlay} className="">
+                      닫기
+                    </button>
+                  </div>
                   <div>
-                    <p>화장실명:{overlay.name}</p>
+                    <p>화장실명: {overlay.name}</p>
                     <p>
                       개방 시간:
                       {overlay.time === "" ? "정보 없음" : overlay.time}
                     </p>
-                    <p>직선거리:{overlay.distance}</p>
+                    <p>직선거리: {overlay.distance}</p>
                     <button onClick={getPath}>길찾기</button>
                   </div>
                 </div>
