@@ -1,4 +1,5 @@
 import { RestroomsData } from "../api/restrooms/route";
+import { Coordinate } from "../Map/page";
 import api from "./axios";
 
 export interface Param {
@@ -12,7 +13,7 @@ export const getMarker = {
   get(a: Param): Promise<RestroomsData[]> {
     return api.get("/api/restrooms", { params: a });
   },
-  test(a: any, b: any): Promise<any> {
+  test(a: any): Promise<Coordinate[]> {
     return api.get("/api/path", { params: a });
   },
 };

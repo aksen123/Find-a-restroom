@@ -1,6 +1,7 @@
 import api from "@/app/service/axios";
 import axios from "axios";
 import { NextRequest } from "next/server";
+import { Coordinate } from "./../../Map/page";
 
 // 인터페이스 정의
 interface Location {
@@ -72,21 +73,18 @@ interface NavigationData {
   routes: Route[];
 }
 
-// TODO : 경로 갖고오기 완료
-// path만 정리해서 반환값으로 넘겨주고 폴리라인 path로 넣어주기
-
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
-  const test: string[] = [];
+  const coordinates: string[] = [];
   searchParams.forEach((el, i) => {
-    test.push(el);
+    coordinates.push(el);
   });
-  const origin = test
+  const origin = coordinates
     .slice(0, 2)
     .reverse()
     .map((coord) => parseFloat(coord).toFixed(7))
     .join(",");
-  const destination = test
+  const destination = coordinates
     .slice(2)
     .reverse()
     .map((coord) => parseFloat(coord).toFixed(7))
@@ -105,9 +103,6 @@ export async function GET(req: NextRequest) {
   });
 
   const newURL = `${url}?${queryParams}`;
-  console.log("🚀 ~ GET ~ queryParams:", newURL, decodeURIComponent(newURL));
-
-  const requestUrl = `${url}?${queryParams}`;
 
   const response = await axios.get(newURL, {
     method: "GET",
@@ -115,19 +110,18 @@ export async function GET(req: NextRequest) {
   });
 
   const data: NavigationData = response.data ? response.data : null;
-  const linePath: kakao.maps.LatLng[] = [];
+  console.log("🚀 ~ GET ~ data:", data.routes[0].summary.distance);
+  const linePath: Coordinate[] = [];
   data.routes[0].sections[0].roads.forEach((router) => {
     router.vertexes.forEach((vertex, index) => {
       if (index % 2 === 0) {
-        linePath.push(
-          new kakao.maps.LatLng(
-            router.vertexes[index + 1],
-            router.vertexes[index]
-          )
-        );
+        linePath.push({
+          lat: router.vertexes[index + 1],
+          lng: router.vertexes[index],
+        });
       }
     });
   });
   console.log(linePath);
-  return Response.json({ data: 1 });
+  return Response.json({ data: linePath });
 }

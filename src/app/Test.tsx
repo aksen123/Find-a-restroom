@@ -10,5 +10,5 @@ export default function Test() {
     response.ok ? console.log(result) : false;
   };
 
-  return <img src="../image/dot.png" alt="" />;
+  return <button onClick={click}>zmfflr</button>;
 }

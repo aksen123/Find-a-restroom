@@ -11,26 +11,26 @@ import {
 import { getMarker, Param } from "../service/getMarker";
 import { RestroomsData } from "../api/restrooms/route";
 
-export interface Location {
+export interface Coordinate {
   lat: number;
   lng: number;
 }
 interface Overlay {
-  location: Location;
+  location: Coordinate;
   time: string;
   name: string;
   distance: string;
 }
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
-  const [location, setLocation] = useState<Location | null>(null);
+  const [location, setLocation] = useState<Coordinate | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
   const [markers2, setMarkers2] = useState<RestroomsData[] | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
   const [search, setSearch] = useState<boolean>(false);
-  const [polyline, setPolyline] = useState<Location[] | null>(null);
+  const [polyline, setPolyline] = useState<Coordinate[] | null>(null);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -53,9 +53,10 @@ export default function Page() {
 
   useEffect(() => {
     if (location && map) {
+      console.log("map change");
       getRestroom(map);
     }
-  }, [location, map]);
+  }, [map, location]);
 
   const getRestroom = async (map: kakao.maps.Map) => {
     const bounds = map.getBounds();
@@ -122,6 +123,7 @@ export default function Page() {
     setMarkers(newMarkers);
     setSearch(false);
   };
+
   const changeMap = () => {
     setSearch(true);
   };
@@ -134,6 +136,10 @@ export default function Page() {
             position.coords.longitude
           );
           map.setCenter(newCenter);
+          setLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
           getRestroom(map);
         }
       },
@@ -141,6 +147,8 @@ export default function Page() {
         console.log(error.message);
       }
     );
+    setOverlay(null);
+    setSearch(false);
   };
   const closeOverlay = () => {
     setOverlay(null);
@@ -151,9 +159,13 @@ export default function Page() {
   };
 
   const getPath = async () => {
-    console.log(polyline);
     const path = await getMarker.test(polyline);
-    console.log(path);
+    setPolyline(path);
+    setOverlay(null);
+    const index = Math.ceil(path.length / 2);
+    const arr = path[index];
+    const test = new kakao.maps.LatLng(path[index].lat, path[index].lng);
+    map?.setCenter(test);
   };
   return (
     <>
@@ -167,13 +179,22 @@ export default function Page() {
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
           >
-            <MapMarker position={location}>내위치</MapMarker>
+            <MapMarker
+              position={location}
+              image={{
+                src: "../image/dot.png",
+                size: { height: 30, width: 30 },
+              }}
+              zIndex={10}
+            >
+              내위치
+            </MapMarker>
             {polyline && (
               <Polyline
                 path={polyline}
                 strokeWeight={3}
                 strokeColor={"#db4040"}
-                strokeOpacity={1}
+                strokeOpacity={polyline.length <= 2 ? 0 : 1}
                 strokeStyle={"solid"}
               />
             )}
@@ -182,7 +203,7 @@ export default function Page() {
                 position={overlay.location}
                 clickable
                 zIndex={1}
-                yAnchor={1.5}
+                yAnchor={1.25}
               >
                 <div
                   className={`w-fit h-fit p-3 bg-blue-200 flex flex-col gap-3`}
