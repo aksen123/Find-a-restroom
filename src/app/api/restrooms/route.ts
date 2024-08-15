@@ -6,7 +6,8 @@ export interface RestroomsData {
   name: string;
   lat: number;
   lng: number;
-  time: string;
+  open_time: string;
+  detail_time: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const conn = await pool.getConnection();
   const rows: RestroomsData = await conn.execute(
-    `SELECT toilet_name AS name, latitude AS lat, longitude AS lng,detailed_opening_hours AS time
+    `SELECT toilet_name AS name, latitude AS lat, longitude AS lng,opening_hours AS open_time ,detailed_opening_hours AS detail_time
     FROM public_restrooms
     WHERE latitude BETWEEN ? AND ?
     AND longitude BETWEEN ? AND ?`,

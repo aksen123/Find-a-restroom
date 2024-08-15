@@ -10,6 +10,7 @@ import {
 } from "react-kakao-maps-sdk";
 import { getMarker, Param } from "../service/getMarker";
 import { RestroomsData } from "../api/restrooms/route";
+import { getRoute } from "../service/getRoute";
 
 export interface Coordinate {
   lat: number;
@@ -90,6 +91,7 @@ export default function Page() {
         const polyline = new kakao.maps.Polyline({
           path: [markerPosition, myLocation],
         });
+
         location &&
           setPolyline([
             location,
@@ -102,7 +104,10 @@ export default function Page() {
         const overlay: Overlay = {
           location: { lat: restroom.lat, lng: restroom.lng },
           name: restroom.name,
-          time: restroom.time,
+          time:
+            restroom.detail_time === "" || "-" || ":~:"
+              ? restroom.open_time
+              : restroom.detail_time,
           distance: distance,
         };
         setOverlay(overlay);
@@ -116,10 +121,10 @@ export default function Page() {
       minLevel: 5,
     });
 
-    markerClusterer?.setMap(null);
-    setMarkerClusterer(cluster);
-    markers?.forEach((el) => el.setMap(null));
-    setMarkers(newMarkers);
+    // markerClusterer?.setMap(null);
+    // setMarkerClusterer(cluster);
+    // markers?.forEach((el) => el.setMap(null));
+    // setMarkers(newMarkers);
     setSearch(false);
   };
 
@@ -145,20 +150,22 @@ export default function Page() {
         console.log(error.message);
       }
     );
-    setOverlay(null);
+    closeOverlay();
     setSearch(false);
     map?.setLevel(3);
   };
   const closeOverlay = () => {
     setOverlay(null);
-    setPolyline(null);
   };
   const searchButton = () => {
     if (map) getRestroom(map);
   };
 
   const getPath = async () => {
-    const path = await getMarker.test(polyline);
+    if (overlay && +overlay?.distance.replace("km", "") > 1.5) {
+      return alert(`화장실이 너무 멀리 있습니다.`);
+    }
+    const path = await getRoute.get(polyline as Coordinate[]);
     setPolyline(path);
     setOverlay(null);
     const bounds = new kakao.maps.LatLngBounds();
@@ -186,13 +193,11 @@ export default function Page() {
                 size: { height: 30, width: 30 },
               }}
               zIndex={10}
-            >
-              내위치
-            </MapMarker>
+            ></MapMarker>
             {polyline && (
               <Polyline
                 path={polyline}
-                strokeWeight={3}
+                strokeWeight={5}
                 strokeColor={"#db4040"}
                 strokeOpacity={polyline.length <= 2 ? 0 : 1}
                 strokeStyle={"solid"}
@@ -213,12 +218,9 @@ export default function Page() {
                       닫기
                     </button>
                   </div>
-                  <div>
+                  <div className="flex flex-col gap-3">
                     <p>화장실명: {overlay.name}</p>
-                    <p>
-                      개방 시간:
-                      {overlay.time === "" ? "정보 없음" : overlay.time}
-                    </p>
+                    <p>개방 시간: {overlay.time}</p>
                     <p>직선거리: {overlay.distance}</p>
                     <button onClick={getPath}>길찾기</button>
                   </div>
