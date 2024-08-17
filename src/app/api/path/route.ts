@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
     .reverse()
     .map((coord) => parseFloat(coord).toFixed(7))
     .join(",");
-  const REST_API_KEY = process.env.NEXT_PUBLIC_KAKAO_KEY2;
+  const REST_API_KEY = process.env.KAKAO_CAR_KEY;
   const url = "https://apis-navi.kakaomobility.com/v1/directions";
 
   const headers = {
@@ -105,12 +105,10 @@ export async function GET(req: NextRequest) {
   const newURL = `${url}?${queryParams}`;
 
   const response = await axios.get(newURL, {
-    method: "GET",
     headers: headers,
   });
 
   const data: NavigationData = response.data ? response.data : null;
-  console.log("🚀 ~ GET ~ data:", data.routes[0].summary.distance);
   const linePath: Coordinate[] = [];
   data.routes[0].sections[0].roads.forEach((router) => {
     router.vertexes.forEach((vertex, index) => {
@@ -122,6 +120,5 @@ export async function GET(req: NextRequest) {
       }
     });
   });
-  console.log(linePath);
   return Response.json({ data: linePath });
 }

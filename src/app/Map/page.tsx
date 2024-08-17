@@ -8,7 +8,7 @@ import {
   Polyline,
   useKakaoLoader,
 } from "react-kakao-maps-sdk";
-import { getMarker, Param } from "../service/getMarker";
+import { getMarker, Range } from "../service/getMarker";
 import { RestroomsData } from "../api/restrooms/route";
 import { getRoute } from "../service/getRoute";
 
@@ -60,13 +60,13 @@ export default function Page() {
 
   const getRestroom = async (map: kakao.maps.Map) => {
     const bounds = map.getBounds();
-    const params = {
+    const params: Range = {
       sw_lat: bounds.getSouthWest().getLat(),
       ne_lat: bounds.getNorthEast().getLat(),
       sw_lng: bounds.getSouthWest().getLng(),
       ne_lng: bounds.getNorthEast().getLng(),
     };
-    const restrooms = await getMarker.get(params as Param);
+    const restrooms = await getMarker.get(params);
     const newMarkers = restrooms.map((restroom) => {
       const marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(restroom.lat, restroom.lng),
@@ -92,11 +92,12 @@ export default function Page() {
           path: [markerPosition, myLocation],
         });
 
-        location &&
-          setPolyline([
-            location,
-            { lat: markerPosition.getLat(), lng: markerPosition.getLng() },
-          ]);
+        const start = location as Coordinate;
+        const end = {
+          lat: markerPosition.getLat(),
+          lng: markerPosition.getLng(),
+        };
+        location && setPolyline([start, end]);
         const distance =
           polyline.getLength() > 1000
             ? (polyline.getLength() / 1000).toFixed(2) + "km"
@@ -174,6 +175,12 @@ export default function Page() {
     );
     map?.setBounds(bounds);
   };
+
+  const walkTest = async () => {
+    const test = await getRoute.walk(polyline as Coordinate[]);
+    console.log(test);
+    setPolyline(test);
+  };
   return (
     <>
       <div className="relative">
@@ -211,7 +218,7 @@ export default function Page() {
                 yAnchor={1.25}
               >
                 <div
-                  className={`w-fit h-fit p-3 bg-blue-500 flex flex-col gap-3 text-white`}
+                  className={`w-fit h-fit p-3 bg-blue-500 flex flex-col gap-3 text-white rounded-xl`}
                 >
                   <div className="flex justify-end">
                     <button onClick={closeOverlay} className="">
@@ -219,23 +226,29 @@ export default function Page() {
                     </button>
                   </div>
                   <div className="flex flex-col gap-3">
-                    <p>화장실명: {overlay.name}</p>
-                    <p>개방 시간: {overlay.time}</p>
-                    <p>직선거리: {overlay.distance}</p>
-                    <button onClick={getPath}>길찾기</button>
+                    <p className="font-bold">화장실명: {overlay.name}</p>
+                    <p className="font-bold">개방 시간: {overlay.time}</p>
+                    <p className="font-bold">직선거리: {overlay.distance}</p>
+                    <div className="flex justify-around">
+                      <button onClick={getPath}>길찾기</button>
+                      <button onClick={walkTest}>도보경로</button>
+                    </div>
                   </div>
                 </div>
               </CustomOverlayMap>
             )}
           </Map>
         )}
-        <div className="z-30 absolute top-6 left-6">
-          <span>메뉴바</span>
-        </div>
-        <div onClick={myLocationClick} className="z-30 absolute top-6 right-6">
-          <span>내 위치</span>
-        </div>
-        <div className="absolute bottom-0 bg-slate-500 w-full h-20 z-30 rounded-t-3xl flex items-center justify-center">
+        <button
+          onClick={walkTest}
+          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 left-6"
+        >
+          메뉴
+        </button>
+        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 right-6">
+          내 위치
+        </button>
+        <div className="absolute bottom-0 bg-slate-200 w-full h-20 z-30 rounded-t-3xl flex items-center justify-center">
           {search && (
             <button
               onClick={searchButton}
@@ -249,7 +262,7 @@ export default function Page() {
             className="relative w-4/5 h-1/2 bg-white rounded-2xl overflow-hidden flex items-center px-1"
           >
             <input type="text" className="w-full h-full outline-none p-3" />
-            <button className="border-2 w-8 h-8 border-blue-700 rounded-2xl"></button>
+            <button className="w-8 h-8">🔍</button>
           </form>
         </div>
       </div>
