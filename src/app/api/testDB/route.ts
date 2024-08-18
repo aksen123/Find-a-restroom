@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 
 export async function GET() {
-  const name = "seoul.csv";
+  const name = "test.csv";
   const readPath = path.join(
     process.cwd(),
     "src",
@@ -28,45 +28,46 @@ export async function GET() {
     "testDB",
     "testDB.csv"
   );
-  const csv = fs.readFileSync(readPath, "utf-8").split(/\n/);
-  const result: any[] = [];
-  const errTest: any[] = [];
+  const csv = fs.readFileSync(readPath, "utf-8");
+  console.log([csv]);
+  // const result: any[] = [];
+  // const errTest: any[] = [];
 
-  result.push(csv[0]);
-  errTest.push(csv[0]);
-  for (let i = 1; i < csv.length; i++) {
-    const arr = csv[i].split(",");
-    if (+arr[20] === 0) {
-      const address = arr[4].length <= 4 ? arr[5] : arr[4];
-      const test = await getGeocode(address.replace(/"/g, ""));
-      if (test === false) {
-        errTest.push(arr.join(","));
-      } else {
-        arr[20] = test.lat;
-        arr[21] = test.lng;
-        result.push(arr.join(","));
-      }
-    } else {
-      result.push(arr.join(","));
-    }
-  }
+  // result.push(csv[0]);
+  // errTest.push(csv[0]);
+  // for (let i = 1; i < csv.length; i++) {
+  //   const arr = csv[i].split(",");
+  //   if (+arr[20] === 0) {
+  //     const address = arr[4].length <= 4 ? arr[5] : arr[4];
+  //     const test = await getGeocode(address.replace(/"/g, ""));
+  //     if (test === false) {
+  //       errTest.push(arr.join(","));
+  //     } else {
+  //       arr[20] = test.lat;
+  //       arr[21] = test.lng;
+  //       result.push(arr.join(","));
+  //     }
+  //   } else {
+  //     result.push(arr.join(","));
+  //   }
+  // }
 
-  console.log(errTest.length, result);
+  // console.log(errTest.length, result);
 
-  fs.writeFile(writePath, result.join("\n"), "utf-8", (err) => {
-    if (err) {
-      console.error("Error writing to CSV file:", err);
-    } else {
-      console.log("Write to CSV successfully!");
-    }
-  });
-  fs.writeFile(writePath2, errTest.join("\n"), "utf-8", (err) => {
-    if (err) {
-      console.error("Error writing to CSV file:", err);
-    } else {
-      console.log("Write to CSV successfully!");
-    }
-  });
+  // fs.writeFile(writePath, result.join("\n"), "utf-8", (err) => {
+  //   if (err) {
+  //     console.error("Error writing to CSV file:", err);
+  //   } else {
+  //     console.log("Write to CSV successfully!");
+  //   }
+  // });
+  // fs.writeFile(writePath2, errTest.join("\n"), "utf-8", (err) => {
+  //   if (err) {
+  //     console.error("Error writing to CSV file:", err);
+  //   } else {
+  //     console.log("Write to CSV successfully!");
+  //   }
+  // });
   return Response.json({ data: 123123 });
 }
 

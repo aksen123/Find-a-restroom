@@ -1,7 +1,8 @@
-import { RestRooms } from "../api/restrooms/route";
+import { RestroomsData } from "../api/restrooms/route";
+import { Coordinate } from "../Map/page";
 import api from "./axios";
 
-export interface Param {
+export interface Range {
   sw_lat: number;
   ne_lat: number;
   sw_lng: number;
@@ -9,7 +10,7 @@ export interface Param {
 }
 
 export const getMarker = {
-  get(a: Param): Promise<RestRooms[]> {
-    return api.get("/api/restrooms", { params: a });
+  get(range: Range): Promise<RestroomsData[]> {
+    return api.get("/api/restrooms", { params: range });
   },
 };
