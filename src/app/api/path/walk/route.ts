@@ -46,6 +46,7 @@ export async function GET(req: NextRequest) {
     params: { version: "1" },
     headers: headers,
   });
+  console.log("🚀 ~ GET ~ data:", data.features[2].geometry.coordinates);
   // const response: Coordinate[] = data.features.map((el)=> {
   //   const coord = el.geometry.coordinates
   //   if(Array.isArray(coord[0])){
@@ -66,10 +67,6 @@ export async function GET(req: NextRequest) {
       return { lat: coords[1], lng: coords[0] };
     }
   });
-  console.log(
-    "🚀 ~ path ~ path:",
-    path
-  );
 
   return Response.json({ data: path });
 }

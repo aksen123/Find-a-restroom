@@ -11,7 +11,7 @@ import {
 import { getMarker, Range } from "../service/getMarker";
 import { RestroomsData } from "../api/restrooms/route";
 import { getRoute } from "../service/getRoute";
-
+import Loading from "../components/loading/Loading";
 export interface Coordinate {
   lat: number;
   lng: number;
@@ -21,6 +21,10 @@ interface Overlay {
   time: string;
   name: string;
   distance: string;
+  info: {
+    distance: string;
+    minuteTime: string;
+  } | null;
 }
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
@@ -32,6 +36,7 @@ export default function Page() {
   const [overlay, setOverlay] = useState<Overlay | null>(null);
   const [search, setSearch] = useState<boolean>(false);
   const [polyline, setPolyline] = useState<Coordinate[] | null>(null);
+  const [pathLoading, setPathLoading] = useState<boolean>(false);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -58,6 +63,13 @@ export default function Page() {
     }
   }, [location, map]);
 
+  const changeDistance = (distance: number) => {
+    const changeDistance =
+      distance > 1000
+        ? (distance / 1000).toFixed(2) + "km"
+        : Math.ceil(distance) + "m";
+    return changeDistance;
+  };
   const getRestroom = async (map: kakao.maps.Map) => {
     const bounds = map.getBounds();
     const params: Range = {
@@ -98,10 +110,7 @@ export default function Page() {
           lng: markerPosition.getLng(),
         };
         location && setPolyline([start, end]);
-        const distance =
-          polyline.getLength() > 1000
-            ? (polyline.getLength() / 1000).toFixed(2) + "km"
-            : Math.ceil(polyline.getLength()) + "m";
+        const distance = changeDistance(polyline.getLength());
         const overlay: Overlay = {
           location: { lat: restroom.lat, lng: restroom.lng },
           name: restroom.name,
@@ -110,6 +119,7 @@ export default function Page() {
               ? restroom.open_time
               : restroom.detail_time,
           distance: distance,
+          info: null,
         };
         setOverlay(overlay);
         map.panTo(marker.getPosition());
@@ -162,31 +172,41 @@ export default function Page() {
     if (map) getRestroom(map);
   };
 
-  const getPath = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    console.log(event.currentTarget.textContent);
-    if (overlay && +overlay?.distance.replace("km", "") > 1.5) {
-      return alert(`화장실이 너무 멀리 있습니다.`);
-    }
-    const path = await getRoute.get(polyline as Coordinate[]);
-    setPolyline(path);
+  const getPath = async () => {
     setOverlay(null);
-    const bounds = new kakao.maps.LatLngBounds();
-    path.map((coord) =>
-      bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
-    );
-    map?.setBounds(bounds);
-  };
+    setPathLoading(() => true);
 
-  const walkTest = async () => {
-    const path = await getRoute.walk(polyline as Coordinate[]);
-    console.log(path);
-    setPolyline(path);
-    setOverlay(null);
-    const bounds = new kakao.maps.LatLngBounds();
-    path.map((coord) =>
-      bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
-    );
-    map?.setBounds(bounds);
+    if (overlay) {
+      if (+overlay?.distance.replace("km", "") > 1.5) {
+        return alert(`화장실이 너무 멀리 있습니다.`);
+      }
+      try {
+        const path = await getRoute.walk(polyline as Coordinate[]);
+        const distance = new kakao.maps.Polyline({
+          path: path.map((el) => new kakao.maps.LatLng(el.lat, el.lng)),
+        }).getLength();
+        const info = {
+          distance: changeDistance(distance),
+          minuteTime: "10",
+        };
+        const half = path[Math.floor(path.length / 2)];
+        const location = { lat: half.lat, lng: half.lng };
+        setPolyline(path);
+        setTimeout(() => {
+          setOverlay({ ...overlay, location, info });
+        }, 0);
+
+        const bounds = new kakao.maps.LatLngBounds();
+        path.map((coord) =>
+          bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
+        );
+        map?.setBounds(bounds);
+      } catch (error) {
+        alert("경로를 찾지 못했습니다.");
+      } finally {
+        setPathLoading(false);
+      }
+    }
   };
 
   if (loading) return <div>맵 로딩중</div>;
@@ -235,24 +255,39 @@ export default function Page() {
                     </button>
                   </div>
                   <div className="flex flex-col gap-3">
-                    <p className="font-bold">화장실명: {overlay.name}</p>
-                    <p className="font-bold">개방 시간: {overlay.time}</p>
-                    <p className="font-bold">직선거리: {overlay.distance}</p>
-                    <div className="flex justify-around">
-                      <button onClick={walkTest}>길 찾기</button>
-                    </div>
+                    {overlay.info ? (
+                      <>
+                        <p className="font-bold">
+                          경로 거리: {overlay.info.distance}
+                        </p>
+                        <p className="font-bold">
+                          예상 시간: {overlay.info.minuteTime}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-bold">화장실명: {overlay.name}</p>
+                        <p className="font-bold">개방 시간: {overlay.time}</p>
+                        <p className="font-bold">
+                          직선거리: {overlay.distance}
+                        </p>
+                        <div className="flex justify-around">
+                          <button onClick={getPath}>길 찾기</button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               </CustomOverlayMap>
             )}
           </Map>
         )}
-        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 left-6">
+        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 left-6">
           메뉴
         </button>
         <button
           onClick={myLocationClick}
-          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 right-6"
+          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 right-6"
         >
           내 위치
         </button>
@@ -263,6 +298,11 @@ export default function Page() {
           >
             현위치에서 검색
           </button>
+        )}
+        {pathLoading && (
+          <div className="absolute z-10 bg-black bg-opacity-75 top-0 w-full h-full flex items-center justify-center">
+            <Loading />
+          </div>
         )}
       </div>
     </>
