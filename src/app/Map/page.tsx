@@ -162,7 +162,8 @@ export default function Page() {
     if (map) getRestroom(map);
   };
 
-  const getPath = async () => {
+  const getPath = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    console.log(event.currentTarget.textContent);
     if (overlay && +overlay?.distance.replace("km", "") > 1.5) {
       return alert(`화장실이 너무 멀리 있습니다.`);
     }
@@ -177,10 +178,18 @@ export default function Page() {
   };
 
   const walkTest = async () => {
-    const test = await getRoute.walk(polyline as Coordinate[]);
-    console.log(test);
-    setPolyline(test);
+    const path = await getRoute.walk(polyline as Coordinate[]);
+    console.log(path);
+    setPolyline(path);
+    setOverlay(null);
+    const bounds = new kakao.maps.LatLngBounds();
+    path.map((coord) =>
+      bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
+    );
+    map?.setBounds(bounds);
   };
+
+  if (loading) return <div>맵 로딩중</div>;
   return (
     <>
       <div className="relative">
@@ -230,8 +239,7 @@ export default function Page() {
                     <p className="font-bold">개방 시간: {overlay.time}</p>
                     <p className="font-bold">직선거리: {overlay.distance}</p>
                     <div className="flex justify-around">
-                      <button onClick={getPath}>길찾기</button>
-                      <button onClick={walkTest}>도보경로</button>
+                      <button onClick={walkTest}>길 찾기</button>
                     </div>
                   </div>
                 </div>
@@ -239,32 +247,23 @@ export default function Page() {
             )}
           </Map>
         )}
-        <button
-          onClick={walkTest}
-          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 left-6"
-        >
+        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 left-6">
           메뉴
         </button>
-        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 right-6">
+        <button
+          onClick={myLocationClick}
+          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-30 absolute top-6 right-6"
+        >
           내 위치
         </button>
-        <div className="absolute bottom-0 bg-slate-200 w-full h-20 z-30 rounded-t-3xl flex items-center justify-center">
-          {search && (
-            <button
-              onClick={searchButton}
-              className="absolute -top-full border-2 border-blue-500 rounded-2xl p-3 text-white bg-blue-500"
-            >
-              현위치에서 검색
-            </button>
-          )}
-          <form
-            action=""
-            className="relative w-4/5 h-1/2 bg-white rounded-2xl overflow-hidden flex items-center px-1"
+        {search && (
+          <button
+            onClick={searchButton}
+            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 border-2 border-blue-500 rounded-2xl p-3 text-white bg-blue-500"
           >
-            <input type="text" className="w-full h-full outline-none p-3" />
-            <button className="w-8 h-8">🔍</button>
-          </form>
-        </div>
+            현위치에서 검색
+          </button>
+        )}
       </div>
     </>
   );
