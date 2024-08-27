@@ -12,6 +12,7 @@ import { getMarker, Range } from "../service/getMarker";
 import { RestroomsData } from "../api/restrooms/route";
 import { getRoute } from "../service/getRoute";
 import Loading from "../components/loading/Loading";
+import MenuBar from "../components/MenuBar";
 export interface Coordinate {
   lat: number;
   lng: number;
@@ -37,6 +38,7 @@ export default function Page() {
   const [search, setSearch] = useState<boolean>(false);
   const [polyline, setPolyline] = useState<Coordinate[] | null>(null);
   const [pathLoading, setPathLoading] = useState<boolean>(false);
+  const [menuToggle, setMenuToggle] = useState<boolean>(false);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
@@ -62,7 +64,9 @@ export default function Page() {
       getRestroom(map);
     }
   }, [location, map]);
-
+  const closeMenu = () => {
+    setMenuToggle(false);
+  };
   const changeDistance = (distance: number) => {
     const changeDistance =
       distance > 1000
@@ -83,9 +87,7 @@ export default function Page() {
       const marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(restroom.lat, restroom.lng),
         title: restroom.name,
-        map: map,
       });
-
       kakao.maps.event.addListener(marker, "click", () => {
         const markersClick = restrooms.filter(
           (r) =>
@@ -133,14 +135,16 @@ export default function Page() {
     });
 
     // markerClusterer?.setMap(null);
-    // setMarkerClusterer(cluster);
-    // markers?.forEach((el) => el.setMap(null));
-    // setMarkers(newMarkers);
+    setMarkerClusterer(cluster);
+    setMarkers(newMarkers);
     setSearch(false);
   };
 
   const changeMap = () => {
     setSearch(true);
+    if (map) {
+      if (map.getLevel() > 6) setPolyline(null);
+    }
   };
   const myLocationClick = () => {
     navigator.geolocation.getCurrentPosition(
@@ -163,6 +167,7 @@ export default function Page() {
     );
     closeOverlay();
     setSearch(false);
+    setPolyline(null);
     map?.setLevel(3);
   };
   const closeOverlay = () => {
@@ -185,11 +190,13 @@ export default function Page() {
         const distance = new kakao.maps.Polyline({
           path: path.map((el) => new kakao.maps.LatLng(el.lat, el.lng)),
         }).getLength();
+
+        const minuteTime = ((distance / 1000 / 5) * 60).toFixed(0);
         const info = {
           distance: changeDistance(distance),
-          minuteTime: "10",
+          minuteTime: minuteTime + "분",
         };
-        const half = path[Math.floor(path.length / 2)];
+        const half = path[Math.ceil(path.length / 2)];
         const location = { lat: half.lat, lng: half.lng };
         setPolyline(path);
         setTimeout(() => {
@@ -208,7 +215,23 @@ export default function Page() {
       }
     }
   };
-
+  const hideMarkerCluster = () => {
+    if (map && markerClusterer) {
+      markerClusterer.clear();
+    }
+  };
+  const viewMarkerCluster = () => {
+    console.log("메뉴 클릭2");
+    if (map && markers) {
+      const cluster = new kakao.maps.MarkerClusterer({
+        map: map,
+        markers,
+        minLevel: 5,
+      });
+      setMarkerClusterer(cluster);
+    }
+  };
+  const clickMenu = () => setMenuToggle(true);
   if (loading) return <div>맵 로딩중</div>;
   return (
     <>
@@ -282,7 +305,10 @@ export default function Page() {
             )}
           </Map>
         )}
-        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 left-6">
+        <button
+          onClick={clickMenu}
+          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 left-6"
+        >
           메뉴
         </button>
         <button
@@ -299,6 +325,7 @@ export default function Page() {
             현위치에서 검색
           </button>
         )}
+        {menuToggle && <MenuBar onClose={closeMenu} />}
         {pathLoading && (
           <div className="absolute z-10 bg-black bg-opacity-75 top-0 w-full h-full flex items-center justify-center">
             <Loading />

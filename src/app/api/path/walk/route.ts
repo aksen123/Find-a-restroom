@@ -46,27 +46,19 @@ export async function GET(req: NextRequest) {
     params: { version: "1" },
     headers: headers,
   });
-  console.log("🚀 ~ GET ~ data:", data.features[2].geometry.coordinates);
-  // const response: Coordinate[] = data.features.map((el)=> {
-  //   const coord = el.geometry.coordinates
-  //   if(Array.isArray(coord[0])){
-  //     return {lat: }
-  //   }
-  // })
 
   const path = data.features.flatMap((feature: Feature) => {
     const coords = feature.geometry.coordinates;
     if (Array.isArray(coords[0])) {
-      // coords가 이중 배열인 경우
       return (coords as number[][]).map((coord: number[]) => ({
         lat: coord[1],
         lng: coord[0],
       }));
     } else {
-      // coords가 단순 배열인 경우
       return { lat: coords[1], lng: coords[0] };
     }
   });
+  console.log("🚀 ~ path ~ path:", path);
 
   return Response.json({ data: path });
 }
