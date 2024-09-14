@@ -31,7 +31,8 @@ export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [location, setLocation] = useState<Coordinate | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
-  const [markers2, setMarkers2] = useState<RestroomsData[] | null>(null);
+  const [destinationMarker, setDestinationMarker] =
+    useState<kakao.maps.Marker | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
@@ -43,6 +44,7 @@ export default function Page() {
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
   });
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -64,9 +66,11 @@ export default function Page() {
       getRestroom(map);
     }
   }, [location, map]);
+
   const closeMenu = () => {
     setMenuToggle(false);
   };
+
   const changeDistance = (distance: number) => {
     const changeDistance =
       distance > 1000
@@ -74,6 +78,7 @@ export default function Page() {
         : Math.ceil(distance) + "m";
     return changeDistance;
   };
+
   const getRestroom = async (map: kakao.maps.Map) => {
     const bounds = map.getBounds();
     const params: Range = {
@@ -82,6 +87,7 @@ export default function Page() {
       sw_lng: bounds.getSouthWest().getLng(),
       ne_lng: bounds.getNorthEast().getLng(),
     };
+
     const restrooms = await getMarker.get(params);
     const newMarkers = restrooms.map((restroom) => {
       const marker = new kakao.maps.Marker({
@@ -94,7 +100,6 @@ export default function Page() {
             Math.abs(r.lat - restroom.lat) < 0.00001 &&
             Math.abs(r.lng - restroom.lng) < 0.00001
         );
-        if (markersClick.length > 0) setMarkers2(markersClick);
         //TODO 클릭시 중복된 마커가 있으면 리스트로 보여주고 리스트 클릭시 원래 오버레이 보이게 표기
         // 중복안된 마커는 원래대로 오버레이 보여주기.
         const markerPosition = marker.getPosition();
@@ -124,6 +129,7 @@ export default function Page() {
           info: null,
         };
         setOverlay(overlay);
+        setDestinationMarker(marker);
         map.panTo(marker.getPosition());
       });
       return marker;
@@ -134,17 +140,12 @@ export default function Page() {
       minLevel: 5,
     });
 
-    // markerClusterer?.setMap(null);
     setMarkerClusterer(cluster);
-    setMarkers(newMarkers);
     setSearch(false);
   };
 
   const changeMap = () => {
     setSearch(true);
-    if (map) {
-      if (map.getLevel() > 6) setPolyline(null);
-    }
   };
   const myLocationClick = () => {
     navigator.geolocation.getCurrentPosition(
@@ -207,6 +208,9 @@ export default function Page() {
         path.map((coord) =>
           bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
         );
+        hideMarkerCluster();
+        destinationMarker?.setMap(map);
+        console.log(destinationMarker);
         map?.setBounds(bounds);
       } catch (error) {
         alert("경로를 찾지 못했습니다.");
@@ -232,6 +236,9 @@ export default function Page() {
     }
   };
   const clickMenu = () => setMenuToggle(true);
+  const clickMap = (event: kakao.maps.event.MouseEvent) => {
+    console.log(event.latLng, "클릭");
+  };
   if (loading) return <div>맵 로딩중</div>;
   return (
     <>
@@ -244,6 +251,7 @@ export default function Page() {
             onDragEnd={changeMap}
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
+            onClick={(e, v) => clickMap(v)}
           >
             <MapMarker
               position={location}

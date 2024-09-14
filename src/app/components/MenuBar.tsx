@@ -9,6 +9,9 @@ export default function MenuBar({ onClose }: Props) {
     e.stopPropagation();
     onClose();
   };
+  const addRestroom = () => {
+    onClose();
+  };
   return (
     <div
       onClick={clickDiv}
@@ -18,10 +21,17 @@ export default function MenuBar({ onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         className="bg-white w-fit h-full p-5 space-y-8"
       >
-        <h3>000님 안녕하세요</h3>
+        <h3>000님 안녕하세요 or 로그인</h3>
         <ul className="space-y-3">
-          <li>내가 저장한 화장실</li>
-          <li>급할때</li>
+          <li>
+            <button>등록한 화장실</button>
+          </li>
+          <li>
+            <button>화장실 등록</button>
+          </li>
+          <li>
+            <button>꿀팁</button>
+          </li>
         </ul>
       </aside>
     </div>
