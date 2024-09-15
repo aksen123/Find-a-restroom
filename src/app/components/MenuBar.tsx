@@ -2,14 +2,12 @@ import React from "react";
 
 interface Props {
   onClose: () => void;
+  clickAdd: () => void;
 }
 
-export default function MenuBar({ onClose }: Props) {
+export default function MenuBar({ onClose, clickAdd }: Props) {
   const clickDiv = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
-    onClose();
-  };
-  const addRestroom = () => {
     onClose();
   };
   return (
@@ -27,7 +25,7 @@ export default function MenuBar({ onClose }: Props) {
             <button>등록한 화장실</button>
           </li>
           <li>
-            <button>화장실 등록</button>
+            <button onClick={clickAdd}>화장실 등록</button>
           </li>
           <li>
             <button>꿀팁</button>

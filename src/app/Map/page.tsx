@@ -43,6 +43,7 @@ export default function Page() {
   const [overlay, setOverlay] = useState<Overlay | null>(null);
   const [addOverlay, setAddOverlay] = useState<AddOverlayType | null>(null);
   const [search, setSearch] = useState<boolean>(false);
+  const [addMode, setAddMode] = useState<boolean>(false);
   const [polyline, setPolyline] = useState<Coordinate[] | null>(null);
   const [pathLoading, setPathLoading] = useState<boolean>(false);
   const [menuToggle, setMenuToggle] = useState<boolean>(false);
@@ -147,6 +148,7 @@ export default function Page() {
     });
 
     setMarkerClusterer(cluster);
+    setMarkers(newMarkers);
     setSearch(false);
   };
 
@@ -244,7 +246,11 @@ export default function Page() {
   const clickAddRestroom = () => {
     setOverlay(null);
     closeMenu();
+    setAddMode(true);
   };
+  // TODO
+  // addOverlay에 닫기 등록 버튼 만들기
+  // 화장실 등록 버튼에 함수 추가로 넣어주기 (addMode 변경함수)
   const clickMap = (event: kakao.maps.event.MouseEvent) => {
     if (map) {
       const latLng = event.latLng;
@@ -259,6 +265,7 @@ export default function Page() {
       map.panTo(newMarker.getPosition());
       setAddOverlay(overlay);
       newMarker.setMap(map);
+      setAddMode(false);
     }
   };
   if (loading) return <div>맵 로딩중</div>;
@@ -273,7 +280,7 @@ export default function Page() {
             onDragEnd={changeMap}
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
-            onClick={(_, event) => clickMap(event)}
+            onClick={(_, event) => addMode && clickMap(event)}
           >
             <MapMarker
               position={location}
@@ -338,7 +345,9 @@ export default function Page() {
             현위치에서 검색
           </button>
         )}
-        {menuToggle && <MenuBar onClose={closeMenu} />}
+        {menuToggle && (
+          <MenuBar onClose={closeMenu} clickAdd={clickAddRestroom} />
+        )}
         {pathLoading && (
           <div className="absolute z-10 bg-black bg-opacity-75 top-0 w-full h-full flex items-center justify-center">
             <Loading />
