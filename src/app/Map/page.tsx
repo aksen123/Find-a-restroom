@@ -38,6 +38,7 @@ export default function Page() {
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
   const [destinationMarker, setDestinationMarker] =
     useState<kakao.maps.Marker | null>(null);
+  const [testMarker, setTestMarker] = useState<kakao.maps.Marker | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
@@ -248,9 +249,6 @@ export default function Page() {
     closeMenu();
     setAddMode(true);
   };
-  // TODO
-  // addOverlay에 닫기 등록 버튼 만들기
-  // 화장실 등록 버튼에 함수 추가로 넣어주기 (addMode 변경함수)
   const clickMap = (event: kakao.maps.event.MouseEvent) => {
     if (map) {
       const latLng = event.latLng;
@@ -258,14 +256,33 @@ export default function Page() {
       const newMarker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(latLng.getLat(), latLng.getLng()),
         image: new kakao.maps.MarkerImage("../image/dot.png", size),
+        draggable: true,
       });
       const overlay = {
         location: { lat: latLng.getLat(), lng: latLng.getLng() },
       };
+      kakao.maps.event.addListener(newMarker, "dragend", () => {
+        if (map) {
+          const newLatLng = newMarker.getPosition();
+          const overlay = {
+            location: { lat: newLatLng.getLat(), lng: newLatLng.getLng() },
+          };
+          setAddOverlay(overlay);
+          map.panTo(newMarker.getPosition());
+          setTestMarker(newMarker);
+        }
+      });
       map.panTo(newMarker.getPosition());
       setAddOverlay(overlay);
       newMarker.setMap(map);
+      setTestMarker(newMarker);
       setAddMode(false);
+    }
+  };
+  const removeAddMarker = () => {
+    if (map) {
+      setAddOverlay(null);
+      testMarker?.setMap(null);
     }
   };
   if (loading) return <div>맵 로딩중</div>;
@@ -295,9 +312,9 @@ export default function Page() {
                 position={addOverlay.location}
                 clickable
                 zIndex={1}
-                yAnchor={1.25}
+                yAnchor={1.5}
               >
-                <AddOverlay />
+                <AddOverlay closeButton={removeAddMarker} />
               </CustomOverlayMap>
             )}
             {polyline && (
@@ -327,20 +344,20 @@ export default function Page() {
         )}
         <button
           onClick={clickMenu}
-          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 left-6"
+          className="bg-blue-500 p-3 text-white font-semibold rounded-md z-[5] absolute top-6 left-6"
         >
           메뉴
         </button>
         <button
           onClick={myLocationClick}
-          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 right-6"
+          className="bg-blue-500 p-3 text-white font-semibold rounded-md z-[5] absolute top-6 right-6"
         >
           내 위치
         </button>
         {search && (
           <button
             onClick={searchButton}
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 border-2 border-blue-500 rounded-2xl p-3 text-white bg-blue-500"
+            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 border-2 border-blue-500 rounded-md p-3 text-white bg-blue-500"
           >
             현위치에서 검색
           </button>
@@ -351,6 +368,11 @@ export default function Page() {
         {pathLoading && (
           <div className="absolute z-10 bg-black bg-opacity-75 top-0 w-full h-full flex items-center justify-center">
             <Loading />
+          </div>
+        )}
+        {addMode && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 p-3 bg-orange-500 text-white rounded-md">
+            저장할 위치를 클릭해 주세요
           </div>
         )}
       </div>
