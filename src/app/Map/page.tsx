@@ -12,11 +12,14 @@ import { getMarker, Range } from "../service/getMarker";
 import { RestroomsData } from "../api/restrooms/route";
 import { getRoute } from "../service/getRoute";
 import Loading from "../components/loading/Loading";
+import MenuBar from "../components/MenuBar";
+import MarkerOverlay from "../components/overlay/MarkerOverlay";
+import AddOverlay from "../components/overlay/AddOverlay";
 export interface Coordinate {
   lat: number;
   lng: number;
 }
-interface Overlay {
+export interface Overlay {
   location: Coordinate;
   time: string;
   name: string;
@@ -26,21 +29,30 @@ interface Overlay {
     minuteTime: string;
   } | null;
 }
+
+export type AddOverlayType = Pick<Overlay, "location">;
+interface AddOverlay {}
 export default function Page() {
   const [map, setMap] = useState<kakao.maps.Map | null>(null);
   const [location, setLocation] = useState<Coordinate | null>(null);
   const [markers, setMarkers] = useState<kakao.maps.Marker[] | null>(null);
-  const [markers2, setMarkers2] = useState<RestroomsData[] | null>(null);
+  const [destinationMarker, setDestinationMarker] =
+    useState<kakao.maps.Marker | null>(null);
+  const [testMarker, setTestMarker] = useState<kakao.maps.Marker | null>(null);
   const [markerClusterer, setMarkerClusterer] =
     useState<kakao.maps.MarkerClusterer | null>(null);
   const [overlay, setOverlay] = useState<Overlay | null>(null);
+  const [addOverlay, setAddOverlay] = useState<AddOverlayType | null>(null);
   const [search, setSearch] = useState<boolean>(false);
+  const [addMode, setAddMode] = useState<boolean>(false);
   const [polyline, setPolyline] = useState<Coordinate[] | null>(null);
   const [pathLoading, setPathLoading] = useState<boolean>(false);
+  const [menuToggle, setMenuToggle] = useState<boolean>(false);
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_KEY as string,
     libraries: ["clusterer", "drawing", "services"],
   });
+
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -63,6 +75,10 @@ export default function Page() {
     }
   }, [location, map]);
 
+  const closeMenu = () => {
+    setMenuToggle(false);
+  };
+
   const changeDistance = (distance: number) => {
     const changeDistance =
       distance > 1000
@@ -70,6 +86,7 @@ export default function Page() {
         : Math.ceil(distance) + "m";
     return changeDistance;
   };
+
   const getRestroom = async (map: kakao.maps.Map) => {
     const bounds = map.getBounds();
     const params: Range = {
@@ -78,21 +95,19 @@ export default function Page() {
       sw_lng: bounds.getSouthWest().getLng(),
       ne_lng: bounds.getNorthEast().getLng(),
     };
+
     const restrooms = await getMarker.get(params);
     const newMarkers = restrooms.map((restroom) => {
       const marker = new kakao.maps.Marker({
         position: new kakao.maps.LatLng(restroom.lat, restroom.lng),
         title: restroom.name,
-        map: map,
       });
-
       kakao.maps.event.addListener(marker, "click", () => {
         const markersClick = restrooms.filter(
           (r) =>
             Math.abs(r.lat - restroom.lat) < 0.00001 &&
             Math.abs(r.lng - restroom.lng) < 0.00001
         );
-        if (markersClick.length > 0) setMarkers2(markersClick);
         //TODO 클릭시 중복된 마커가 있으면 리스트로 보여주고 리스트 클릭시 원래 오버레이 보이게 표기
         // 중복안된 마커는 원래대로 오버레이 보여주기.
         const markerPosition = marker.getPosition();
@@ -122,6 +137,7 @@ export default function Page() {
           info: null,
         };
         setOverlay(overlay);
+        setDestinationMarker(marker);
         map.panTo(marker.getPosition());
       });
       return marker;
@@ -132,10 +148,8 @@ export default function Page() {
       minLevel: 5,
     });
 
-    // markerClusterer?.setMap(null);
-    // setMarkerClusterer(cluster);
-    // markers?.forEach((el) => el.setMap(null));
-    // setMarkers(newMarkers);
+    setMarkerClusterer(cluster);
+    setMarkers(newMarkers);
     setSearch(false);
   };
 
@@ -163,6 +177,7 @@ export default function Page() {
     );
     closeOverlay();
     setSearch(false);
+    setPolyline(null);
     map?.setLevel(3);
   };
   const closeOverlay = () => {
@@ -185,11 +200,13 @@ export default function Page() {
         const distance = new kakao.maps.Polyline({
           path: path.map((el) => new kakao.maps.LatLng(el.lat, el.lng)),
         }).getLength();
+
+        const minuteTime = ((distance / 1000 / 5) * 60).toFixed(0);
         const info = {
           distance: changeDistance(distance),
-          minuteTime: "10",
+          minuteTime: minuteTime + "분",
         };
-        const half = path[Math.floor(path.length / 2)];
+        const half = path[Math.ceil(path.length / 2)];
         const location = { lat: half.lat, lng: half.lng };
         setPolyline(path);
         setTimeout(() => {
@@ -200,6 +217,8 @@ export default function Page() {
         path.map((coord) =>
           bounds.extend(new kakao.maps.LatLng(coord.lat, coord.lng))
         );
+        hideMarkerCluster();
+        destinationMarker?.setMap(map);
         map?.setBounds(bounds);
       } catch (error) {
         alert("경로를 찾지 못했습니다.");
@@ -208,7 +227,64 @@ export default function Page() {
       }
     }
   };
-
+  const hideMarkerCluster = () => {
+    if (map && markerClusterer) {
+      markerClusterer.clear();
+    }
+  };
+  const viewMarkerCluster = () => {
+    console.log("메뉴 클릭2");
+    if (map && markers) {
+      const cluster = new kakao.maps.MarkerClusterer({
+        map: map,
+        markers,
+        minLevel: 5,
+      });
+      setMarkerClusterer(cluster);
+    }
+  };
+  const clickMenu = () => setMenuToggle(true);
+  const clickAddRestroom = () => {
+    setOverlay(null);
+    closeMenu();
+    setAddMode(true);
+  };
+  const clickMap = (event: kakao.maps.event.MouseEvent) => {
+    if (map) {
+      const latLng = event.latLng;
+      const size = new kakao.maps.Size(30, 30);
+      const newMarker = new kakao.maps.Marker({
+        position: new kakao.maps.LatLng(latLng.getLat(), latLng.getLng()),
+        image: new kakao.maps.MarkerImage("../image/dot.png", size),
+        draggable: true,
+      });
+      const overlay = {
+        location: { lat: latLng.getLat(), lng: latLng.getLng() },
+      };
+      kakao.maps.event.addListener(newMarker, "dragend", () => {
+        if (map) {
+          const newLatLng = newMarker.getPosition();
+          const overlay = {
+            location: { lat: newLatLng.getLat(), lng: newLatLng.getLng() },
+          };
+          setAddOverlay(overlay);
+          map.panTo(newMarker.getPosition());
+          setTestMarker(newMarker);
+        }
+      });
+      map.panTo(newMarker.getPosition());
+      setAddOverlay(overlay);
+      newMarker.setMap(map);
+      setTestMarker(newMarker);
+      setAddMode(false);
+    }
+  };
+  const removeAddMarker = () => {
+    if (map) {
+      setAddOverlay(null);
+      testMarker?.setMap(null);
+    }
+  };
   if (loading) return <div>맵 로딩중</div>;
   return (
     <>
@@ -221,6 +297,7 @@ export default function Page() {
             onDragEnd={changeMap}
             onZoomChanged={changeMap}
             onCreate={(map) => setMap(map)}
+            onClick={(_, event) => addMode && clickMap(event)}
           >
             <MapMarker
               position={location}
@@ -230,6 +307,16 @@ export default function Page() {
               }}
               zIndex={10}
             ></MapMarker>
+            {addOverlay && (
+              <CustomOverlayMap
+                position={addOverlay.location}
+                clickable
+                zIndex={1}
+                yAnchor={1.5}
+              >
+                <AddOverlay closeButton={removeAddMarker} />
+              </CustomOverlayMap>
+            )}
             {polyline && (
               <Polyline
                 path={polyline}
@@ -246,62 +333,46 @@ export default function Page() {
                 zIndex={1}
                 yAnchor={1.25}
               >
-                <div
-                  className={`w-fit h-fit p-3 bg-blue-500 flex flex-col gap-3 text-white rounded-xl`}
-                >
-                  <div className="flex justify-end">
-                    <button onClick={closeOverlay} className="">
-                      닫기
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-3">
-                    {overlay.info ? (
-                      <>
-                        <p className="font-bold">
-                          경로 거리: {overlay.info.distance}
-                        </p>
-                        <p className="font-bold">
-                          예상 시간: {overlay.info.minuteTime}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-bold">화장실명: {overlay.name}</p>
-                        <p className="font-bold">개방 시간: {overlay.time}</p>
-                        <p className="font-bold">
-                          직선거리: {overlay.distance}
-                        </p>
-                        <div className="flex justify-around">
-                          <button onClick={getPath}>길 찾기</button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
+                <MarkerOverlay
+                  overlay={overlay}
+                  closeOverlay={closeOverlay}
+                  getPath={getPath}
+                />
               </CustomOverlayMap>
             )}
           </Map>
         )}
-        <button className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 left-6">
+        <button
+          onClick={clickMenu}
+          className="bg-blue-500 p-3 text-white font-semibold rounded-md z-[5] absolute top-6 left-6"
+        >
           메뉴
         </button>
         <button
           onClick={myLocationClick}
-          className="bg-blue-500 p-3 text-white font-semibold rounded-2xl z-[5] absolute top-6 right-6"
+          className="bg-blue-500 p-3 text-white font-semibold rounded-md z-[5] absolute top-6 right-6"
         >
           내 위치
         </button>
         {search && (
           <button
             onClick={searchButton}
-            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 border-2 border-blue-500 rounded-2xl p-3 text-white bg-blue-500"
+            className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10 border-2 border-blue-500 rounded-md p-3 text-white bg-blue-500"
           >
             현위치에서 검색
           </button>
         )}
+        {menuToggle && (
+          <MenuBar onClose={closeMenu} clickAdd={clickAddRestroom} />
+        )}
         {pathLoading && (
           <div className="absolute z-10 bg-black bg-opacity-75 top-0 w-full h-full flex items-center justify-center">
             <Loading />
+          </div>
+        )}
+        {addMode && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10 p-3 bg-orange-500 text-white rounded-md">
+            저장할 위치를 클릭해 주세요
           </div>
         )}
       </div>

@@ -27,6 +27,9 @@ const config: Config = {
         slideInLeft: "slideInLeft 0.5s ease-out",
         slideInRight: "slideInRight 0.5s ease-out 0.5s forwards",
       },
+      screens: {
+        pc: { max: "1024px" },
+      },
     },
   },
   plugins: [],
